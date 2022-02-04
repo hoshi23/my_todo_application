@@ -114,9 +114,8 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  final _textFieldController = TextEditingController();
-
   Future<String?> _showTextInputDialog(BuildContext context) async {
+    final _textFieldController = TextEditingController();
     return showDialog(
         context: context,
         builder: (context) {
@@ -142,13 +141,13 @@ class _MyHomePageState extends State<MyHomePage> {
         });
   }
 
-  final _textFieldControllerMemo = TextEditingController();
   Future<String?> _showTextInputDialogMemo(BuildContext context) async {
+    final _textFieldControllerMemo = TextEditingController();
     return showDialog(
         context: context,
         builder: (context) {
           return AlertDialog(
-            title: const Text('TODO'),
+            title: const Text('詳細'),
             content:
             TextField(
               controller: _textFieldControllerMemo,
@@ -174,7 +173,7 @@ class _MyHomePageState extends State<MyHomePage> {
 ////////////////////
 class TodoCardWidget extends StatefulWidget {
   final String label;
-  final String memo;
+  String memo;
   // 真偽値（Boolen）型のstateを外部からアクセスできるように修正
   var state = false;
   bool isVisible = true;
@@ -213,6 +212,34 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
     /// ------------------------------------
   }
 
+  Future<String?> _changeTextInputDialogMemo(BuildContext context, String before) async {
+    final _textFieldControllerMemo = TextEditingController(text: before);
+    return showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('詳細の更新'),
+            content:
+            TextField(
+              controller: _textFieldControllerMemo,
+              decoration: const InputDecoration(hintText: "タスクの内容を入力してください。"),
+
+            ),
+            actions: <Widget>[
+              ElevatedButton(
+                child: const Text("キャンセル"),
+                onPressed: () => Navigator.pop(context, before),
+              ),
+              ElevatedButton(
+                child: const Text('OK'),
+                onPressed: () =>
+                    Navigator.pop(context, _textFieldControllerMemo.text),
+              ),
+            ],
+          );
+        });
+  }
+
 
 
   @override
@@ -238,7 +265,26 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
                             IconButton(
                               iconSize: 20,
                               color: HexColor('000080'),
-                              onPressed: () {},
+                              onPressed: () {
+                                SharedPreferences.getInstance().then((prefs) async {
+                                  var todo = prefs.getStringList("todo") ?? [];
+                                  var len_todo = todo.length;
+                                  var new_memo = await _changeTextInputDialogMemo(context, widget.memo);
+                                  if (new_memo == null) {
+                                    new_memo = "";
+                                  }
+                                  widget.memo = new_memo;
+                                  for (int i = 0; i < len_todo; i++) {
+                                    var mapObj = jsonDecode(todo[i]);
+                                    if (mapObj["title"] == widget.label) {
+                                      mapObj["memo"] = new_memo;
+                                      break;
+                                    }
+                                  }
+                                  await prefs.setStringList("todo", todo);
+                                  setState(() {});
+                                });
+                              },
                               icon: Icon(Icons.create_outlined),
                             ),
                             IconButton(
@@ -258,9 +304,7 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
                                   }
                                   await prefs.setStringList("todo", todo);
                                   setState(() {});
-
                                 });
-
                               },
                               icon: Icon(Icons.disabled_by_default_outlined),
                             ),
