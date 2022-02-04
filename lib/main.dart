@@ -177,6 +177,7 @@ class TodoCardWidget extends StatefulWidget {
   final String memo;
   // 真偽値（Boolen）型のstateを外部からアクセスできるように修正
   var state = false;
+  bool isVisible = true;
 
   TodoCardWidget({
     Key? key,
@@ -203,7 +204,6 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
       var mapObj = jsonDecode(todo[i]);
       if (mapObj["title"] == widget.label) {
         mapObj["state"] = widget.state;
-        mapObj["memo"] = widget.memo;
         todo[i] = jsonEncode(mapObj);
       }
     }
@@ -213,32 +213,86 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
     /// ------------------------------------
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: EdgeInsets.all(10),
-      child: Container(
-        padding: EdgeInsets.all(10),
-        child: Row(
-          children: [
-            Checkbox(onChanged: _changeState, value: widget.state),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Text(widget.label),
-                Text(widget.memo,
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                ),
-              ],
-            ),
-          ],
+      child: Visibility(
+        visible: widget.isVisible,
+        child: Container(
+          padding: EdgeInsets.all(10),
+          child: Row(
+            children: [
+              Checkbox(onChanged: _changeState, value: widget.state),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      Text(widget.label),
+                      Row(
+                          children: <Widget>[
+                            IconButton(
+                              iconSize: 20,
+                              color: HexColor('000080'),
+                              onPressed: () {},
+                              icon: Icon(Icons.create_outlined),
+                            ),
+                            IconButton(
+                              iconSize: 20,
+                              color: Colors.red,
+                              onPressed: () {
+                                SharedPreferences.getInstance().then((prefs) async {
+                                  var todo = prefs.getStringList("todo") ?? [];
+                                  var len_todo = todo.length;
+                                  widget.isVisible = false;
+                                  for (int i = 0; i < len_todo; i++) {
+                                    var mapObj = jsonDecode(todo[i]);
+                                    if (mapObj["title"] == widget.label) {
+                                      todo.remove(todo[i]);
+                                      break;
+                                    }
+                                  }
+                                  await prefs.setStringList("todo", todo);
+                                  setState(() {});
+
+                                });
+
+                              },
+                              icon: Icon(Icons.disabled_by_default_outlined),
+                            ),
+                        ],),
+                    ],
+                  ),
+                  Text(widget.memo,
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class HexColor extends Color {
+  static int _getColorFromHex(String hexColor) {
+    hexColor = hexColor.toUpperCase().replaceAll('#', '');
+    if (hexColor.length == 6) {
+      hexColor = 'FF' + hexColor;
+    }
+    return int.parse(hexColor, radix: 16);
+  }
+
+  HexColor(final String hexColor) : super(_getColorFromHex(hexColor));
 }
 
