@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:location/location.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 ///////////////////////////////
 void main() => runApp(MyApp());
@@ -22,6 +25,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+
   @override
   void initState() {
     super.initState();
@@ -38,7 +42,13 @@ class _MyHomePageState extends State<MyHomePage> {
       var title = mapObj['title'];
       var state = mapObj['state'];
       var memo = mapObj['memo'];
-      cards.add(TodoCardWidget(label: title, state: state, memo: memo));
+      var latitude = mapObj['latitude'];
+      var longitude = mapObj['longitude'];
+      bool isLocation = false;
+      if (latitude != null && longitude != null) {
+        isLocation = true;
+      }
+      cards.add(TodoCardWidget(label: title, state: state, memo: memo, latitude: latitude, longitude: longitude, isLocation: isLocation));
     }
     return cards;
   }
@@ -100,8 +110,18 @@ class _MyHomePageState extends State<MyHomePage> {
             if (memo == null) {
               memo = "";
             }
+            var map = await _showTextInputDialogMap(context);
+            debugPrint("finish map");
+            bool isLocation = false;
+            var latitude = null;
+            var longitude = null;
+            if (map != null) {
+              isLocation = true;
+              latitude = map.latitude;
+              longitude = map.longitude;
+            }
             // 辞書型オブジェクトを生成し、JSON形式の文字列に変換して保存
-            var mapObj = {"title": label, "state": false, "memo": memo};
+            var mapObj = {"title": label, "state": false, "memo": memo, "latitude": latitude, "longitude": longitude, "isLocation": isLocation};
             var jsonStr = jsonEncode(mapObj);
             todo.add(jsonStr);
             await prefs.setStringList("todo", todo);
@@ -168,7 +188,85 @@ class _MyHomePageState extends State<MyHomePage> {
         });
   }
 
+  Future<LocationData?> _showTextInputDialogMap(BuildContext context) async {
+    debugPrint("Map");
+    Location location = new Location();
+
+    bool _serviceEnabled;
+    PermissionStatus _permissionGranted;
+    LocationData _locationData;
+
+    _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
+            () => Navigator.pop(context);
+      }
+    }
+
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+            () => Navigator.pop(context);
+      }
+    }
+    debugPrint("getlocation");
+    _locationData = await location.getLocation();
+    debugPrint("finish getlocation");
+    return showDialog(
+        context: context,
+        builder: (context) {
+          debugPrint("in return ");
+          return AlertDialog(
+            title: const Text('位置情報を追加'),
+            content: Scaffold(
+              body: Center(
+                child: FlutterMap(
+                  options: MapOptions(
+                      center: (_locationData != null)
+                          ? LatLng(_locationData.latitude!, _locationData.longitude!)
+                          : LatLng(0, 0),
+                      zoom: 18.0),
+                  layers: [
+                    TileLayerOptions(
+                      urlTemplate:
+                      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                      subdomains: ['a', 'b', 'c'],
+                      attributionBuilder: (_) =>
+                      const Text("© OpenStreetMap contributors"),
+                    ),
+                    MarkerLayerOptions(markers: [
+                      Marker(
+                        width: 80.0,
+                        height: 80.0,
+                        point: (_locationData != null)
+                            ? LatLng(_locationData.latitude!, _locationData.longitude!)
+                            : LatLng(0, 0),
+                        builder: (ctx) => const Icon(Icons.location_pin),
+                      )
+                    ]),
+                  ],
+                ),
+              ),
+            ),
+            actions: <Widget>[
+              ElevatedButton(
+                child: const Text("キャンセル"),
+                onPressed: () => Navigator.pop(context),
+              ),
+              ElevatedButton(
+                child: const Text('追加'),
+                onPressed: () =>
+                    Navigator.pop(context, _locationData),
+              ),
+            ],
+          );
+        });
+  }
+
 }
+
 
 ////////////////////
 class TodoCardWidget extends StatefulWidget {
@@ -177,12 +275,18 @@ class TodoCardWidget extends StatefulWidget {
   // 真偽値（Boolen）型のstateを外部からアクセスできるように修正
   var state = false;
   bool isVisible = true;
+  var latitude = null;
+  var longitude = null;
+  bool isLocation = false;
 
   TodoCardWidget({
     Key? key,
     required this.label,
     required this.state,
     required this.memo,
+    required this.latitude,
+    required this.longitude,
+    required this.isLocation,
   }) : super(key: key);
 
   @override
@@ -240,7 +344,71 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
         });
   }
 
+  Future<void> _showTextInputDialogMap(BuildContext context, var latitude, var longitude) async {
 
+    return showDialog(
+        context: context,
+        builder: (context) {
+          debugPrint("in return ");
+          return AlertDialog(
+            title: const Text('位置情報'),
+            content: Scaffold(
+              body: Center(
+                child: FlutterMap(
+                  options: MapOptions(
+                      center: (latitude != null && longitude != null)
+                          ? LatLng(latitude!, longitude!)
+                          : LatLng(0, 0),
+                      zoom: 18.0),
+                  layers: [
+                    TileLayerOptions(
+                      urlTemplate:
+                      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                      subdomains: ['a', 'b', 'c'],
+                      attributionBuilder: (_) =>
+                      const Text("© OpenStreetMap contributors"),
+                    ),
+                    MarkerLayerOptions(markers: [
+                      Marker(
+                        width: 80.0,
+                        height: 80.0,
+                        point: (latitude != null && longitude != null)
+                            ? LatLng(latitude!, longitude!)
+                            : LatLng(0, 0),
+                        builder: (ctx) => const Icon(Icons.location_pin),
+                      )
+                    ]),
+                  ],
+                ),
+              ),
+            ),
+            actions: <Widget>[
+              ElevatedButton(
+                child: const Text("OK"),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          );
+        });
+  }
+
+  Future<void> _showTextInputNoMap(BuildContext context) async {
+    return showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('位置情報'),
+            content:
+              const Text("位置情報は追加されていません"),
+            actions: <Widget>[
+              ElevatedButton(
+                child: const Text("OK"),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          );
+        });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -286,6 +454,30 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
                                 });
                               },
                               icon: Icon(Icons.create_outlined),
+                            ),
+                            IconButton(
+                              iconSize: 20,
+                              color: Colors.green,
+                              onPressed: () {
+                                SharedPreferences.getInstance().then((prefs) async {
+                                  var todo = prefs.getStringList("todo") ?? [];
+                                  var len_todo = todo.length;
+                                  for (int i = 0; i < len_todo; i++) {
+                                    var mapObj = jsonDecode(todo[i]);
+                                    if (mapObj["title"] == widget.label) {
+                                      if (mapObj["isLocation"]) {
+                                        await _showTextInputDialogMap(context, mapObj["latitude"], mapObj["longitude"]);
+                                      }
+                                      else {
+                                        await _showTextInputNoMap(context);
+                                      }
+                                      break;
+                                    }
+                                  }
+                                  setState(() {});
+                                });
+                              },
+                              icon: Icon(Icons.location_on_outlined),
                             ),
                             IconButton(
                               iconSize: 20,
