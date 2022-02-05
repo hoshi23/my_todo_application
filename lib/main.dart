@@ -102,8 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           var label = await _showTextInputDialog(context);
-
-          if (label != null) {
+          if (label != null && label != "") {
             SharedPreferences prefs = await SharedPreferences.getInstance();
             var todo = prefs.getStringList("todo") ?? [];
             var memo  = await _showTextInputDialogMemo(context);
@@ -252,7 +251,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             actions: <Widget>[
               ElevatedButton(
-                child: const Text("キャンセル"),
+                child: const Text("追加しない"),
                 onPressed: () => Navigator.pop(context),
               ),
               ElevatedButton(
@@ -344,8 +343,7 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
         });
   }
 
-  Future<void> _showTextInputDialogMap(BuildContext context, var latitude, var longitude) async {
-
+  Future<LocationData?> _showTextInputDialogMap(BuildContext context, var latitude, var longitude) async {
     return showDialog(
         context: context,
         builder: (context) {
@@ -384,6 +382,13 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
             ),
             actions: <Widget>[
               ElevatedButton(
+                child: const Text("変更"),
+                onPressed: () async {
+                  var locationData = await _changeTextInputDialogMap(context);
+                  Navigator.pop(context, locationData);
+                },
+              ),
+              ElevatedButton(
                 child: const Text("OK"),
                 onPressed: () => Navigator.pop(context),
               ),
@@ -392,7 +397,7 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
         });
   }
 
-  Future<void> _showTextInputNoMap(BuildContext context) async {
+  Future<LocationData?> _showTextInputNoMap(BuildContext context) async {
     return showDialog(
         context: context,
         builder: (context) {
@@ -402,6 +407,13 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
               const Text("位置情報は追加されていません"),
             actions: <Widget>[
               ElevatedButton(
+                child: const Text("変更"),
+                onPressed: () async {
+                  var locationData = await _changeTextInputDialogMap(context);
+                  Navigator.pop(context, locationData);
+                },
+              ),
+              ElevatedButton(
                 child: const Text("OK"),
                 onPressed: () => Navigator.pop(context),
               ),
@@ -409,6 +421,83 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
           );
         });
   }
+  Future<LocationData?> _changeTextInputDialogMap(BuildContext context) async {
+    debugPrint("Map");
+    Location location = new Location();
+
+    bool _serviceEnabled;
+    PermissionStatus _permissionGranted;
+    LocationData _locationData;
+
+    _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
+            () => Navigator.pop(context);
+      }
+    }
+
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+            () => Navigator.pop(context);
+      }
+    }
+    debugPrint("getlocation");
+    _locationData = await location.getLocation();
+    debugPrint("finish getlocation");
+    return showDialog(
+        context: context,
+        builder: (context) {
+          debugPrint("in return ");
+          return AlertDialog(
+            title: const Text('位置情報を変更'),
+            content: Scaffold(
+              body: Center(
+                child: FlutterMap(
+                  options: MapOptions(
+                      center: (_locationData != null)
+                          ? LatLng(_locationData.latitude!, _locationData.longitude!)
+                          : LatLng(0, 0),
+                      zoom: 18.0),
+                  layers: [
+                    TileLayerOptions(
+                      urlTemplate:
+                      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                      subdomains: ['a', 'b', 'c'],
+                      attributionBuilder: (_) =>
+                      const Text("© OpenStreetMap contributors"),
+                    ),
+                    MarkerLayerOptions(markers: [
+                      Marker(
+                        width: 80.0,
+                        height: 80.0,
+                        point: (_locationData != null)
+                            ? LatLng(_locationData.latitude!, _locationData.longitude!)
+                            : LatLng(0, 0),
+                        builder: (ctx) => const Icon(Icons.location_pin),
+                      )
+                    ]),
+                  ],
+                ),
+              ),
+            ),
+            actions: <Widget>[
+              ElevatedButton(
+                child: const Text("キャンセル"),
+                onPressed: () => Navigator.pop(context),
+              ),
+              ElevatedButton(
+                child: const Text('変更'),
+                onPressed: () =>
+                    Navigator.pop(context, _locationData),
+              ),
+            ],
+          );
+        });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -460,16 +549,22 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
                               color: Colors.green,
                               onPressed: () {
                                 SharedPreferences.getInstance().then((prefs) async {
+                                  var locationData = null;
                                   var todo = prefs.getStringList("todo") ?? [];
                                   var len_todo = todo.length;
                                   for (int i = 0; i < len_todo; i++) {
                                     var mapObj = jsonDecode(todo[i]);
                                     if (mapObj["title"] == widget.label) {
                                       if (mapObj["isLocation"]) {
-                                        await _showTextInputDialogMap(context, mapObj["latitude"], mapObj["longitude"]);
+                                        locationData = await _showTextInputDialogMap(context, mapObj["latitude"], mapObj["longitude"]);
                                       }
                                       else {
-                                        await _showTextInputNoMap(context);
+                                        locationData = await _showTextInputNoMap(context);
+                                      }
+                                      if (locationData != null) {
+                                        mapObj["latitude"] = locationData.latitude;
+                                        mapObj["longitude"] = locationData.longitude;
+                                        await prefs.setStringList("todo", todo);
                                       }
                                       break;
                                     }
