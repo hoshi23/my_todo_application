@@ -102,8 +102,7 @@ class _MyHomePageState extends State<MyHomePage> {
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           var label = await _showTextInputDialog(context);
-
-          if (label != null) {
+          if (label != null && label != "") {
             SharedPreferences prefs = await SharedPreferences.getInstance();
             var todo = prefs.getStringList("todo") ?? [];
             var memo  = await _showTextInputDialogMemo(context);
