@@ -37,6 +37,8 @@ dependencies:
   shared_preferences: ^2.0.12
   sensors: ^2.0.3
   location: ^4.2.0
+  flutter_map: ^0.14.0
+  latlong2: ^0.8.1
 
 dev_dependencies:
   flutter_test:
