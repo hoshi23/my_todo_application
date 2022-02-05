@@ -508,105 +508,107 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
         child: Container(
           padding: EdgeInsets.all(10),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Checkbox(onChanged: _changeState, value: widget.state),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Checkbox(onChanged: _changeState, value: widget.state),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: <Widget>[
                       Text(widget.label),
-                      Row(
-                          children: <Widget>[
-                            IconButton(
-                              iconSize: 20,
-                              color: HexColor('000080'),
-                              onPressed: () {
-                                SharedPreferences.getInstance().then((prefs) async {
-                                  var todo = prefs.getStringList("todo") ?? [];
-                                  var len_todo = todo.length;
-                                  var new_memo = await _changeTextInputDialogMemo(context, widget.memo);
-                                  if (new_memo == null) {
-                                    new_memo = "";
-                                  }
-                                  widget.memo = new_memo;
-                                  for (int i = 0; i < len_todo; i++) {
-                                    var mapObj = jsonDecode(todo[i]);
-                                    if (mapObj["title"] == widget.label) {
-                                      mapObj["memo"] = new_memo;
-                                      break;
-                                    }
-                                  }
-                                  await prefs.setStringList("todo", todo);
-                                  setState(() {});
-                                });
-                              },
-                              icon: Icon(Icons.create_outlined),
-                            ),
-                            IconButton(
-                              iconSize: 20,
-                              color: Colors.green,
-                              onPressed: () {
-                                SharedPreferences.getInstance().then((prefs) async {
-                                  var locationData = null;
-                                  var todo = prefs.getStringList("todo") ?? [];
-                                  var len_todo = todo.length;
-                                  for (int i = 0; i < len_todo; i++) {
-                                    var mapObj = jsonDecode(todo[i]);
-                                    if (mapObj["title"] == widget.label) {
-                                      if (mapObj["isLocation"]) {
-                                        locationData = await _showTextInputDialogMap(context, mapObj["latitude"], mapObj["longitude"]);
-                                      }
-                                      else {
-                                        locationData = await _showTextInputNoMap(context);
-                                      }
-                                      if (locationData != null) {
-                                        mapObj["latitude"] = locationData.latitude;
-                                        mapObj["longitude"] = locationData.longitude;
-                                        await prefs.setStringList("todo", todo);
-                                      }
-                                      break;
-                                    }
-                                  }
-                                  setState(() {});
-                                });
-                              },
-                              icon: Icon(Icons.location_on_outlined),
-                            ),
-                            IconButton(
-                              iconSize: 20,
-                              color: Colors.red,
-                              onPressed: () {
-                                SharedPreferences.getInstance().then((prefs) async {
-                                  var todo = prefs.getStringList("todo") ?? [];
-                                  var len_todo = todo.length;
-                                  widget.isVisible = false;
-                                  for (int i = 0; i < len_todo; i++) {
-                                    var mapObj = jsonDecode(todo[i]);
-                                    if (mapObj["title"] == widget.label) {
-                                      todo.remove(todo[i]);
-                                      break;
-                                    }
-                                  }
-                                  await prefs.setStringList("todo", todo);
-                                  setState(() {});
-                                });
-                              },
-                              icon: Icon(Icons.disabled_by_default_outlined),
-                            ),
-                        ],),
-                    ],
-                  ),
-                  Text(widget.memo,
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                      Text(widget.memo,
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                    ],
                   ),
                 ],
               ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: <Widget>[
+                  IconButton(
+                    iconSize: 20,
+                    color: HexColor('000080'),
+                    onPressed: () {
+                      SharedPreferences.getInstance().then((prefs) async {
+                        var todo = prefs.getStringList("todo") ?? [];
+                        var len_todo = todo.length;
+                        var new_memo = await _changeTextInputDialogMemo(context, widget.memo);
+                        if (new_memo == null) {
+                          new_memo = "";
+                        }
+                        widget.memo = new_memo;
+                        for (int i = 0; i < len_todo; i++) {
+                          var mapObj = jsonDecode(todo[i]);
+                          if (mapObj["title"] == widget.label) {
+                            mapObj["memo"] = new_memo;
+                            break;
+                          }
+                        }
+                        await prefs.setStringList("todo", todo);
+                        setState(() {});
+                      });
+                    },
+                    icon: Icon(Icons.create_outlined),
+                  ),
+                  IconButton(
+                    iconSize: 20,
+                    color: Colors.green,
+                    onPressed: () {
+                      SharedPreferences.getInstance().then((prefs) async {
+                        var locationData = null;
+                        var todo = prefs.getStringList("todo") ?? [];
+                        var len_todo = todo.length;
+                        for (int i = 0; i < len_todo; i++) {
+                          var mapObj = jsonDecode(todo[i]);
+                          if (mapObj["title"] == widget.label) {
+                            if (mapObj["isLocation"]) {
+                              locationData = await _showTextInputDialogMap(context, mapObj["latitude"], mapObj["longitude"]);
+                            }
+                            else {
+                              locationData = await _showTextInputNoMap(context);
+                            }
+                            if (locationData != null) {
+                              mapObj["latitude"] = locationData.latitude;
+                              mapObj["longitude"] = locationData.longitude;
+                              await prefs.setStringList("todo", todo);
+                            }
+                            break;
+                          }
+                        }
+                        setState(() {});
+                      });
+                    },
+                    icon: Icon(Icons.location_on_outlined),
+                  ),
+                  IconButton(
+                    iconSize: 20,
+                    color: Colors.red,
+                    onPressed: () {
+                      SharedPreferences.getInstance().then((prefs) async {
+                        var todo = prefs.getStringList("todo") ?? [];
+                        var len_todo = todo.length;
+                        widget.isVisible = false;
+                        for (int i = 0; i < len_todo; i++) {
+                          var mapObj = jsonDecode(todo[i]);
+                          if (mapObj["title"] == widget.label) {
+                            todo.remove(todo[i]);
+                            break;
+                          }
+                        }
+                        await prefs.setStringList("todo", todo);
+                        setState(() {});
+                      });
+                    },
+                    icon: Icon(Icons.disabled_by_default_outlined),
+                  ),
+                ],),
             ],
           ),
         ),
