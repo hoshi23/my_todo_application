@@ -540,10 +540,9 @@ class _TodoCardWidgetState extends State<TodoCardWidget> {
                         var todo = prefs.getStringList("todo") ?? [];
                         var len_todo = todo.length;
                         var new_memo = await _changeTextInputDialogMemo(context, widget.memo);
-                        if (new_memo == null) {
-                          new_memo = "";
+                        if (new_memo != null) {
+                          widget.memo = new_memo;
                         }
-                        widget.memo = new_memo;
                         for (int i = 0; i < len_todo; i++) {
                           var mapObj = jsonDecode(todo[i]);
                           if (mapObj["title"] == widget.label) {
